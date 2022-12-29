@@ -1,5 +1,7 @@
 import numpy as np
+import cv2
 
 
 def preview(image: np.array) -> None:
-    raise NotImplemented
+    cv2.imshow("Preview", image)
+    cv2.waitKey(0)
