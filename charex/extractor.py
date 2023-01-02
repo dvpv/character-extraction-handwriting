@@ -4,8 +4,12 @@ from . import output
 from .utils.colorcycle import ColorCycle
 from typing import List
 
+DEFAULT_LETTER_IMAGE_SIZE = [50, 50]
+DEFAULT_LETTER_CONTOUR_THRESH = 10
 DEFAULT_LINE_CONTOUR_THRESH = 200
 DEFAULT_WIDTH_DILATE_MULTIPLIER = 0.1
+DEFAULT_WIDTH_ERODE_MULTIPLIER = 0.01
+DEFAULT_HEIGHT_DILATE_MULTIPLIER = 0.1
 DEFAULT_BLUR_SIGMA = 0.7
 DEFAULT_MASK_COLOR = (0xFF, 0xFF, 0xFF)  # #FFF
 
@@ -82,7 +86,66 @@ def extract_rows(image: np.array, preview_flag: bool = False) -> List[np.array]:
     return lines
 
 
-def extract_letters(row: np.array, preview_flag: bool = False) -> List[np.array]:
-    letters: List[np.array] = []
+def extract_letters(image: np.array, preview_flag: bool = False) -> List[np.array]:
+    original = np.copy(image)
 
+    image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    # Blur out noise
+    image = cv2.GaussianBlur(image, (0, 0), DEFAULT_BLUR_SIGMA)
+    # Grayscale to binary
+    image = cv2.adaptiveThreshold(
+        image,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        blockSize=11,
+        C=5,
+    )
+
+    # Dilate image horizontally
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        ksize=(1, 1),
+    )
+    eroded = cv2.erode(image, kernel, iterations=1)
+    output.preview(eroded)
+    # Get contours for each line
+    contours, _ = cv2.findContours(eroded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # Extract letters
+    letters: List[np.array] = []
+    for contour in contours:
+        if cv2.contourArea(contour) > DEFAULT_LETTER_CONTOUR_THRESH:
+            (x, y, w, h) = cv2.boundingRect(contour)
+            line = np.copy(original)
+            # Build the mask
+            mask = np.zeros(original.shape[:2], np.uint8)
+            cv2.drawContours(mask, [contour], -1, DEFAULT_MASK_COLOR, -1, cv2.LINE_AA)
+            # Crop line
+            line = cv2.bitwise_and(original, original, mask=mask)
+            # Apply white background
+            background = np.ones(original.shape, np.uint8) * 255
+            cv2.bitwise_not(background, background, mask=mask)
+            line += background
+            line = line[y : y + h, x : x + w]
+            line = cv2.resize(line, DEFAULT_LETTER_IMAGE_SIZE)
+            letters.append(line)
+
+    if not preview_flag:
+        cc = ColorCycle()
+        rectangles = np.copy(original)
+
+        for contour in contours:
+            if cv2.contourArea(contour) > DEFAULT_LETTER_CONTOUR_THRESH:
+                (x, y, w, h) = cv2.boundingRect(contour)
+                cv2.rectangle(
+                    img=rectangles,
+                    pt1=(x, y),
+                    pt2=(x + w, y + h),
+                    color=cc.next(),
+                    thickness=-1,
+                )
+        overlay = np.copy(original)
+        overlay = cv2.addWeighted(overlay, 0.6, rectangles, 0.5, 0)
+        output.preview(overlay)
     return letters
