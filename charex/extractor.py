@@ -5,7 +5,7 @@ from .utils.colorcycle import ColorCycle
 from typing import List
 
 DEFAULT_LETTER_IMAGE_SIZE = [50, 50]
-DEFAULT_WIDTH_DILATE_MULTIPLIER = 0.1
+DEFAULT_WIDTH_DILATE_MULTIPLIER = 0.05
 DEFAULT_HEIGHT_DILATE_MULTIPLIER = 0.01
 DEFAULT_WIDTH_ERODE_MULTIPLIER = 0.01
 DEFAULT_HEIGHT_DILATE_MULTIPLIER = 0.1
@@ -74,6 +74,7 @@ def extract_rows(image: np.array, preview_flag: bool = False) -> List[np.array]:
     contours, _ = cv2.findContours(dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     contours = __cull_contours_thresh(contours, thresh=0.1)
+    contours = sorted(contours, key=lambda contour: cv2.boundingRect(contour)[1])
 
     # Extract lines
     lines: List[np.array] = []
@@ -95,19 +96,12 @@ def extract_rows(image: np.array, preview_flag: bool = False) -> List[np.array]:
     # Show a nicely formatted image representing the lines with the lines
     if preview_flag:
         cc = ColorCycle()
-        rectangles = np.copy(original)
 
+        highlight = np.ones(original.shape, np.uint8) * 255
         for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(
-                img=rectangles,
-                pt1=(x, y),
-                pt2=(x + w, y + h),
-                color=cc.next(),
-                thickness=-1,
-            )
+            cv2.drawContours(highlight, [contour], -1, cc.next(), -1, cv2.LINE_AA)
         overlay = np.copy(original)
-        overlay = cv2.addWeighted(overlay, 0.6, rectangles, 0.5, 0)
+        overlay = cv2.addWeighted(overlay, 0.5, highlight, 0.5, 0)
         output.preview(overlay)
 
     return lines
@@ -115,7 +109,9 @@ def extract_rows(image: np.array, preview_flag: bool = False) -> List[np.array]:
 
 def __extract_letter_contours(image: np.array) -> List[np.array]:
     contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    return __cull_contours_thresh(contours, thresh=0.1)
+    contours = __cull_contours_thresh(contours, thresh=0.1)
+    contours = sorted(contours, key=lambda contour: cv2.boundingRect(contour)[0])
+    return contours
 
 
 def __preprocess_row_image(image: np.array) -> np.array:
@@ -193,18 +189,18 @@ def __extract_letters(image: np.array, contours: List[np.array]) -> List[np.arra
     letters: List[np.array] = []
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
-        line = np.copy(image)
+        letter = np.copy(image)
         # Build the mask
         mask = np.zeros(image.shape[:2], np.uint8)
         cv2.drawContours(mask, [contour], -1, DEFAULT_MASK_COLOR, -1, cv2.LINE_AA)
         # Crop line
-        line = cv2.bitwise_and(image, image, mask=mask)
+        letter = cv2.bitwise_and(image, image, mask=mask)
         # Apply white background
         background = np.ones(image.shape, np.uint8) * 255
         cv2.bitwise_not(background, background, mask=mask)
-        line += background
-        line = line[y : y + h, x : x + w]
-        letters.append(line)
+        letter += background
+        letter = letter[y : y + h, x : x + w]
+        letters.append(letter)
     return letters
 
 
@@ -276,18 +272,11 @@ def extract_letters(
 
     if preview_flag:
         cc = ColorCycle()
-        rectangles = np.copy(original)
 
+        highlight = np.ones(image.shape, np.uint8) * 255
         for contour in contours:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(
-                img=rectangles,
-                pt1=(x, y),
-                pt2=(x + w, y + h),
-                color=cc.next(),
-                thickness=-1,
-            )
+            cv2.drawContours(highlight, [contour], -1, cc.next(), -1, cv2.LINE_AA)
         overlay = np.copy(original)
-        overlay = cv2.addWeighted(overlay, 0.6, rectangles, 0.5, 0)
+        overlay = cv2.addWeighted(overlay, 0.5, highlight, 0.5, 0)
         output.preview(overlay)
     return letters
