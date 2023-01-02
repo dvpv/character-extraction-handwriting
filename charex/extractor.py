@@ -80,3 +80,9 @@ def extract_rows(image: np.array, preview_flag: bool = False) -> List[np.array]:
         output.preview(overlay)
 
     return lines
+
+
+def extract_letters(row: np.array, preview_flag: bool = False) -> List[np.array]:
+    letters: List[np.array] = []
+
+    return letters

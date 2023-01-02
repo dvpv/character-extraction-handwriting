@@ -12,4 +12,10 @@ def process(input_file: str, output_file: Optional[str], preview_flag: bool) -> 
 
     for row in rows:
         output.preview(row)
+
+    letters_per_row = [extractor.extract_letters(row) for row in rows]
+    for letters in letters_per_row:
+        for letter in letters:
+            output.preview(letter)
+
     # WIP
