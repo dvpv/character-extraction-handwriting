@@ -29,19 +29,19 @@ parser.add_argument(
     "output",
     nargs="?",
     type=str,
-    help="path to the output image file",
+    help="path to the output directory",
 )
 
 
 def main():
     args = parser.parse_args()
     input_file = args.input
-    output_file = args.output
+    output_dir = args.output
     preview_flag = args.preview
     fragmentation_flag = args.fragmentation
     charex.processor.process(
         input_file=input_file,
-        output_file=output_file,
+        output_dir=output_dir,
         preview_flag=preview_flag,
         fragmentation_flag=fragmentation_flag,
     )

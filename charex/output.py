@@ -1,5 +1,7 @@
+from typing import List
 import numpy as np
 import cv2
+import os
 
 DEFAULT_PREVIEW_WIDTH = 1000
 
@@ -23,3 +25,13 @@ def preview(
     )
     cv2.imshow(title, resized)
     cv2.waitKey(0)
+
+
+def save_list(
+    letters: List[np.array],
+    output_dir: str,
+    prefix: str = "image",
+) -> None:
+    os.makedirs(output_dir)
+    for index, letter in enumerate(letters):
+        cv2.imwrite(f"{output_dir}/{prefix}_{index}.jpg", letter)
