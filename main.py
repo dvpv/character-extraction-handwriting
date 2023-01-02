@@ -13,6 +13,13 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "-f",
+    "--fragmentation",
+    action="store_true",
+    help="try to split touching letters",
+)
+
+parser.add_argument(
     "input",
     type=str,
     help="path to the input image file",
@@ -31,10 +38,12 @@ def main():
     input_file = args.input
     output_file = args.output
     preview_flag = args.preview
+    fragmentation_flag = args.fragmentation
     charex.processor.process(
         input_file=input_file,
         output_file=output_file,
         preview_flag=preview_flag,
+        fragmentation_flag=fragmentation_flag,
     )
 
 

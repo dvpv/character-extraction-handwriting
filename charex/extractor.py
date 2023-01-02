@@ -185,8 +185,6 @@ def __preprocess_row_image_elliptic(image: np.array) -> np.array:
             color=255,
             thickness=-1,
         )
-    output.preview(eroded)
-    output.preview(elliptic)
 
     return elliptic
 
@@ -207,6 +205,7 @@ def __extract_letters(image: np.array, contours: List[np.array]) -> List[np.arra
         line += background
         line = line[y : y + h, x : x + w]
         letters.append(line)
+    return letters
 
 
 def __fragment_big_contours_high_erosion(
@@ -216,8 +215,6 @@ def __fragment_big_contours_high_erosion(
     original = np.copy(image)
     _, height, _ = original.shape
     avr_w, _ = __average_contours_dimensions(contours)
-    print([cv2.boundingRect(contour)[2] for contour in contours])
-    print(f"average: {avr_w}")
     good_contours = []
     bad_contours = []
     for contour in contours:
@@ -233,7 +230,6 @@ def __fragment_big_contours_high_erosion(
         x, y, w, h = cv2.boundingRect(contour)
         splits = int(w / (avr_w * DEFAULT_AVERAGE_WIDTH_SPLIT_MULTIPLIER))
         split_size = w / (splits + 1)
-        print(f"splits: {splits}, w: {w}, size: {split_size}")
         for index in range(1, splits + 1):
             big_blobs = cv2.ellipse(
                 big_blobs,
@@ -255,9 +251,7 @@ def __fragment_big_contours_high_erosion(
             color=(255, 255, 255),
             thickness=-1,
         )
-    output.preview(big_blobs)
     processed = __preprocess_row_image_elliptic(big_blobs)
-    output.preview(processed)
     smaller_contours = __extract_letter_contours(processed)
     contours = good_contours
     contours.extend(smaller_contours)
